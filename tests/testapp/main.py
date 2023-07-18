@@ -10,16 +10,12 @@ import altair as alt
 
 @ss.session_verifier
 def check_headers(headers):
-    if headers.get("x-fail") is not None:
-        return False
-    return True
+    return headers.get("x-fail") is None
 
 
 @ss.session_verifier
 def check_cookies(cookies):
-    if cookies.get("fail_cookie") is not None:
-        return False
-    return True
+    return cookies.get("fail_cookie") is None
 
 def update_cities(state, payload):
     if payload == "ar":
@@ -72,8 +68,8 @@ def bad_event_handler(state):
 
 def payload_inspector(state, payload, context):
     state["inspected_payload"] = repr(payload)
-    print("Payload: " + repr(payload))
-    print("Context: " + repr(context))
+    print(f"Payload: {repr(payload)}")
+    print(f"Context: {repr(context)}")
 
 
 def handle_webcam(state, payload):
@@ -84,10 +80,7 @@ def handle_form_submit(state):
     if state["b"]["pet_count"] <= 0:
         state["b"]["message"] = "-You must have pets"
         return
-    state["b"] = {
-        "pet_count": 0
-    }
-    state["b"]["message"] = "+You have pets"
+    state["b"] = {"pet_count": 0, "message": "+You have pets"}
 
 
 def handle_add_to_list(state, context):
@@ -116,19 +109,16 @@ def test_context(state, session, context):
 def _generate_random_df():
     data = np.around(np.random.rand(10, 5), decimals=9)
     column_names = [f'pgcf_{i+1}' for i in range(5)]
-    random_df = pd.DataFrame(data, columns=column_names)
-    return random_df
+    return pd.DataFrame(data, columns=column_names)
 
 
 def _get_main_df():
-    main_df = pd.read_csv("assets/main_df.csv")
-    return main_df
+    return pd.read_csv("assets/main_df.csv")
 
 
 def _get_highlighted_members_dict():
     sample_df = _get_main_df().sample(3)
-    sample_dict = sample_df.to_dict("records")
-    return sample_dict
+    return sample_df.to_dict("records")
 
 
 def _get_story_text():
@@ -149,12 +139,16 @@ def _update_metrics(state):
         "average_bmi": round(bmi, 2),
         "diversity": round(diversity_index, 2),
     }
-    metrics.update({
+    metrics |= {
         "average_weight_note": "+Acceptable",
         "average_length_note": "+Acceptable",
-        "average_bmi_note": "-Overweight" if metrics["average_bmi"] >= 5.3 else "+Acceptable",
-        "diversity_note": "-Not diverse" if metrics["diversity"] < 0.8 else "+Acceptable",
-    })
+        "average_bmi_note": "-Overweight"
+        if metrics["average_bmi"] >= 5.3
+        else "+Acceptable",
+        "diversity_note": "-Not diverse"
+        if metrics["diversity"] < 0.8
+        else "+Acceptable",
+    }
     state["metrics"] = metrics
 
 
@@ -189,12 +183,7 @@ def _get_altair_chart():
     x, y = np.meshgrid(range(-5, 5), range(-5, 5))
     z = x ** 2 + y ** 2
     source = pd.DataFrame({'x': x.ravel(),'y': y.ravel(),'z': z.ravel()})
-    chart = alt.Chart(source).mark_rect().encode(
-        x='x:O',
-        y='y:O',
-        color='z:Q'
-    )
-    return chart
+    return alt.Chart(source).mark_rect().encode(x='x:O', y='y:O', color='z:Q')
 
 # STATE INIT
 

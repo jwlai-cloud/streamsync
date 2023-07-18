@@ -98,9 +98,7 @@ class AppProcess(multiprocessing.Process):
             raise ValueError("Couldn't find app module (streamsyncuserapp).")
         all_user_functions = map(lambda x: x[0], inspect.getmembers(
             streamsyncuserapp, inspect.isfunction))
-        exposed_user_functions = list(
-            filter(lambda x: not x.startswith("_"), all_user_functions))
-        return exposed_user_functions
+        return list(filter(lambda x: not x.startswith("_"), all_user_functions))
 
     def _handle_session_init(self, payload: InitSessionRequestPayload) -> InitSessionResponsePayload:
         """
@@ -144,10 +142,12 @@ class AppProcess(multiprocessing.Process):
         try:
             mutations = session.session_state.user_state.get_mutations_as_dict()
         except BaseException:
-            session.session_state.add_log_entry("error",
-                                                "Serialisation Error",
-                                                f"An exception was raised during serialisation.",
-                                                tb.format_exc())
+            session.session_state.add_log_entry(
+                "error",
+                "Serialisation Error",
+                "An exception was raised during serialisation.",
+                tb.format_exc(),
+            )
 
         mail = session.session_state.mail
 
@@ -231,9 +231,7 @@ class AppProcess(multiprocessing.Process):
 
         with redirect_stdout(io.StringIO()) as f:
             exec(self.run_code, streamsyncuserapp.__dict__)
-        captured_stdout = f.getvalue()
-
-        if captured_stdout:
+        if captured_stdout := f.getvalue():
             streamsync.initial_state.add_log_entry(
                 "info", "Stdout message during initialisation", captured_stdout)
 
@@ -407,8 +405,7 @@ class AppProcessListener(threading.Thread):
                 return
             message_id = packet[0]
             self.response_packets[message_id] = packet
-            response_event = self.response_events.get(message_id)
-            if response_event:
+            if response_event := self.response_events.get(message_id):
                 response_event.set()
             else:
                 raise ValueError(
@@ -439,10 +436,10 @@ class AppRunner:
         self.response_packets: Dict[int, AppProcessServerResponsePacket] = {}
         self.message_counter = 0
 
-        if mode not in ("edit", "run"):
+        if mode in {"edit", "run"}:
+            self.mode = mode
+        else:
             raise ValueError("Invalid mode.")
-
-        self.mode = mode
 
     def _set_observer(self):
         self.observer = watchdog.observers.Observer()
