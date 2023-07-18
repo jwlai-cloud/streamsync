@@ -44,8 +44,7 @@ class FileWrapper:
 
     def _get_file_stream_as_dataurl(self, f_stream: Readable) -> str:
         base64_str = base64.b64encode(f_stream.read()).decode("latin-1")
-        dataurl = f"data:{self.mime_type if self.mime_type is not None else ''};base64,{ base64_str }"
-        return dataurl
+        return f"data:{self.mime_type if self.mime_type is not None else ''};base64,{base64_str}"
 
     def get_as_dataurl(self) -> str:
         if isinstance(self.file, str):
@@ -71,8 +70,7 @@ class BytesWrapper:
 
     def get_as_dataurl(self) -> str:
         b64_data = base64.b64encode(self.raw_data).decode("utf-8")
-        durl = f"data:{self.mime_type if self.mime_type is not None else ''};base64,{ b64_data }"
-        return durl
+        return f"data:{self.mime_type if self.mime_type is not None else ''};base64,{b64_data}"
 
 
 class StateSerialiserException(ValueError):
@@ -102,9 +100,7 @@ class StateSerialiser:
         if isinstance(v, (str, bool)):
             return v
         if isinstance(v, (int, float)):
-            if math.isnan(v):
-                return None
-            return v
+            return None if math.isnan(v) else v
         if v is None:
             return v
 
@@ -203,11 +199,7 @@ class StateProxy:
 
         # Items that are dictionaries are converted to StateProxy instances
 
-        if isinstance(raw_value, dict):
-            value = StateProxy(raw_value)
-        else:
-            value = raw_value
-
+        value = StateProxy(raw_value) if isinstance(raw_value, dict) else raw_value
         self.state[key] = value
         self.apply(key)
 
@@ -326,7 +318,7 @@ class StreamsyncState():
             return
         shortened_message = None
         if len(message) > StreamsyncState.LOG_ENTRY_MAX_LEN:
-            shortened_message = message[0:StreamsyncState.LOG_ENTRY_MAX_LEN] + "..."
+            shortened_message = f"{message[:StreamsyncState.LOG_ENTRY_MAX_LEN]}..."
         else:
             shortened_message = message
         self.add_mail("logEntry", {
@@ -428,10 +420,7 @@ class ComponentManager:
             self.components[component_id] = component
 
     def to_dict(self) -> Dict:
-        active_components = {}
-        for id, component in self.components.items():
-            active_components[id] = component.to_dict()
-        return active_components
+        return {id: component.to_dict() for id, component in self.components.items()}
 
 
 class EventDeserialiser:
@@ -493,7 +482,7 @@ class EventDeserialiser:
         if not isinstance(payload, list):
             raise ValueError(
                 "Invalid multiple options payload. Expected a list.")
-        if not all(item in options.keys() for item in payload):
+        if any(item not in options.keys() for item in payload):
             raise ValueError("Unauthorised option")
         return payload
 
@@ -501,11 +490,7 @@ class EventDeserialiser:
         payload = ev.payload
         page_key = payload.get("pageKey")
         route_vars = dict(payload.get("routeVars"))
-        tf_payload = {
-            "page_key": page_key,
-            "route_vars": route_vars
-        }
-        return tf_payload
+        return {"page_key": page_key, "route_vars": route_vars}
 
     def _transform_change(self, ev) -> str:
         payload = str(ev.payload)
@@ -530,9 +515,7 @@ class EventDeserialiser:
 
     def _transform_file_change(self, ev) -> List[Dict]:
         payload = ev.payload
-        tf_payload = list(map(self._file_item_transform, payload))
-
-        return tf_payload
+        return list(map(self._file_item_transform, payload))
 
     def _transform_date_change(self, ev) -> str:
         payload = ev.payload
@@ -576,19 +559,14 @@ class Evaluator:
                 raise ValueError(
                     f"""Couldn't serialise value of type "{ type(expr_value) }" when evaluating field "{ field_key }".""")
 
-            if as_json:
-                return json.dumps(serialised_value)
-            return str(serialised_value)
+            return json.dumps(serialised_value) if as_json else str(serialised_value)
 
         component_id = instance_path[-1]["componentId"]
         component = component_manager.components[component_id]
         field_value = component.content.get(field_key) or default_field_value
         replaced = self.template_regex.sub(replacer, field_value)
 
-        if as_json:
-            return json.loads(replaced)
-        else:
-            return replaced
+        return json.loads(replaced) if as_json else replaced
 
     def get_context_data(self, instance_path: InstancePath) -> Dict[str, Any]:
         context: Dict[str, Any] = {}
@@ -601,8 +579,8 @@ class Evaluator:
                 continue
             if i + 1 >= len(instance_path):
                 continue
-            repeater_instance_path = instance_path[0:i+1]
-            next_instance_path = instance_path[0:i+2]
+            repeater_instance_path = instance_path[:i+1]
+            next_instance_path = instance_path[:i+2]
             instance_number = next_instance_path[-1]["instanceNumber"]
             repeater_object = self.evaluate_field(
                 repeater_instance_path, "repeaterObject", True, """{ "a": { "desc": "Option A" }, "b": { "desc": "Option B" } }""")
@@ -615,8 +593,7 @@ class Evaluator:
             if isinstance(repeater_object, dict):
                 repeater_items = list(repeater_object.items())
             elif isinstance(repeater_object, list):
-                repeater_items = [(k, v)
-                                  for (k, v) in enumerate(repeater_object)]
+                repeater_items = list(enumerate(repeater_object))
             else:
                 raise ValueError(
                     "Cannot produce context. Repeater object must evaluate to a dictionary.")
@@ -657,9 +634,7 @@ class Evaluator:
         elif state_ref:
             result = state_ref
 
-        if isinstance(result, StateProxy):
-            return result.to_dict()
-        return result
+        return result.to_dict() if isinstance(result, StateProxy) else result
 
 
 class StreamsyncSession:
@@ -712,9 +687,7 @@ class SessionManager:
             verifier_result = verifier(*args)
             if verifier_result is False:
                 return False
-            elif verifier_result is True:
-                pass
-            else:
+            elif verifier_result is not True:
                 raise ValueError(
                     "Invalid verifier return value. Must be True or False.")
         return True
@@ -722,9 +695,7 @@ class SessionManager:
     def _check_proposed_session_id(self, proposed_session_id: Optional[str]) -> bool:
         if proposed_session_id is None:
             return True
-        if SessionManager.hex_pattern.match(proposed_session_id):
-            return True
-        return False
+        return bool(SessionManager.hex_pattern.match(proposed_session_id))
 
     def get_new_session(self, cookies: Optional[Dict] = None, headers: Optional[Dict] = None, proposed_session_id: Optional[str] = None) -> Optional[StreamsyncSession]:
         if not self._check_proposed_session_id(proposed_session_id):
@@ -757,11 +728,12 @@ class SessionManager:
 
     def prune_sessions(self) -> None:
         cutoff_timestamp = int(time.time()) - \
-            SessionManager.IDLE_SESSION_MAX_SECONDS
-        prune_sessions = []
-        for session_id, session in self.sessions.items():
-            if session.last_active_timestamp < cutoff_timestamp:
-                prune_sessions.append(session_id)
+                SessionManager.IDLE_SESSION_MAX_SECONDS
+        prune_sessions = [
+            session_id
+            for session_id, session in self.sessions.items()
+            if session.last_active_timestamp < cutoff_timestamp
+        ]
         for session_id in prune_sessions:
             self.close_session(session_id)
 
@@ -827,8 +799,7 @@ class EventHandler:
         result = None
         with contextlib.redirect_stdout(io.StringIO()) as f:
             result = callable_handler(*args)
-        captured_stdout = f.getvalue()
-        if captured_stdout:
+        if captured_stdout := f.getvalue():
             self.session_state.add_log_entry(
                 "info",
                 "Stdout message",

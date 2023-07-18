@@ -34,7 +34,7 @@ def main():
 def _perform_checks(command: str, absolute_app_path: str, host: Optional[str]):
     is_path_folder = absolute_app_path is not None and os.path.isdir(absolute_app_path)
 
-    if command in ("run", "edit") and is_path_folder is False:
+    if command in {"run", "edit"} and is_path_folder is False:
         logging.error("A path to a folder containing a Streamsync app is required. For example: streamsync edit my_app")
         sys.exit(1)
 
@@ -42,7 +42,7 @@ def _perform_checks(command: str, absolute_app_path: str, host: Optional[str]):
         logging.error("A target folder is required to create a Streamsync app. For example: streamsync create my_app")
         sys.exit(1)
 
-    if command in ("edit", "hello") and host is not None:
+    if command in {"edit", "hello"} and host is not None:
         logging.warning("Streamsync has been enabled in edit mode with a host argument\nThis is enabled for local development purposes (such as a local VM).\nDon't expose Streamsync Builder to the Internet. We recommend using a SSH tunnel instead.")
         logging.warning("Streamsync Builder will only accept local requests (via HTTP origin header).")
 
@@ -86,8 +86,7 @@ def create_app(app_path: str, template_name: str = "default", overwrite=False):
 
 
 def _get_absolute_app_path(app_path: str):
-    is_path_absolute = os.path.isabs(app_path)
-    if is_path_absolute:
+    if is_path_absolute := os.path.isabs(app_path):
         return app_path
     else:
         return os.path.join(os.getcwd(), app_path)

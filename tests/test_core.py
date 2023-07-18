@@ -612,14 +612,10 @@ class TestSessionManager:
 
     def test_session_verifiers(self) -> None:
         def session_verifier_1(cookies: Dict[str, str]):
-            if cookies != {"testCookie": "yes"}:
-                return False
-            return True
+            return cookies == {"testCookie": "yes"}
 
         def session_verifier_2(headers: Dict[str, str]) -> None:
-            if headers != {"origin": "example.com"}:
-                return False
-            return True
+            return headers == {"origin": "example.com"}
 
         self.sm.add_verifier(session_verifier_1)
         self.sm.add_verifier(session_verifier_2)

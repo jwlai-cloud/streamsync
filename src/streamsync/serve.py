@@ -33,9 +33,7 @@ def get_asgi_app(user_app_path: str, serve_mode: ServeMode) -> FastAPI:
         if origin_header is None:
             return False
         hostname = urlsplit(origin_header).hostname
-        if hostname in ("127.0.0.1", "localhost"):
-            return True
-        return False
+        return hostname in ("127.0.0.1", "localhost")
 
     # Init
 
@@ -243,6 +241,8 @@ def get_asgi_app(user_app_path: str, serve_mode: ServeMode) -> FastAPI:
         """ Shuts down the AppRunner when the server is shut down. """
 
         app_runner.shut_down()
+
+    # Mount static paths
 
     # Mount static paths
 

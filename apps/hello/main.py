@@ -39,13 +39,11 @@ def handle_story_download(state):
 def _generate_random_df():
     data = np.around(np.random.rand(10, 5), decimals=9)
     column_names = [f'pgcf_{i+1}' for i in range(5)]
-    random_df = pd.DataFrame(data, columns=column_names)
-    return random_df
+    return pd.DataFrame(data, columns=column_names)
 
 
 def _get_main_df():
-    main_df = pd.read_csv("assets/main_df.csv")
-    return main_df
+    return pd.read_csv("assets/main_df.csv")
 
 
 def _get_highlighted_members():
@@ -73,12 +71,16 @@ def _update_metrics(state):
         "average_bmi": round(bmi, 2),
         "diversity": round(diversity_index, 2),
     }
-    metrics.update({
+    metrics |= {
         "average_weight_note": "+Acceptable",
         "average_length_note": "+Acceptable",
-        "average_bmi_note": "-Overweight" if metrics["average_bmi"] >= 5.2 else "+Acceptable",
-        "diversity_note": "-Not diverse" if metrics["diversity"] < 0.8 else "+Acceptable",
-    })
+        "average_bmi_note": "-Overweight"
+        if metrics["average_bmi"] >= 5.2
+        else "+Acceptable",
+        "diversity_note": "-Not diverse"
+        if metrics["diversity"] < 0.8
+        else "+Acceptable",
+    }
     state["metrics"] = metrics
 
 
